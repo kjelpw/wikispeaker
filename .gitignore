@@ -7,3 +7,5 @@ __pycache__/
 youtube_credentials.pickle
 client_secrets.json
 article.mp3
+config.json
+prompt.txt

@@ -4,6 +4,10 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 
+HEADERS = {
+    'User-Agent': 'WikiSpeakerBot/1.0 (https://github.com/kjelpw/wikispeaker; wikispeaker@example.org)'
+}
+
 class WikipediaArticle:
     def __init__(self):
         logging.info("Initializing WikipediaArticle")
@@ -12,7 +16,7 @@ class WikipediaArticle:
     def get_random_wikipedia_article_summary(self):
         logging.info(f"Fetching summary for article: {self.article_title}")
         url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{self.article_title}"
-        response = requests.get(url)
+        response = requests.get(url, headers=HEADERS, timeout=10)
         if response.status_code == 200 and response.content:
             data = response.json()
             return data.get('extract', 'No summary available')
@@ -23,18 +27,26 @@ class WikipediaArticle:
     def get_random_wikipedia_article_text(self):
         logging.info(f"Fetching text for article: {self.article_title}")
         url = f"https://en.wikipedia.org/api/rest_v1/page/html/{self.article_title}"
-        response = requests.get(url)
+        response = requests.get(url, headers=HEADERS, timeout=10)
         if response.status_code == 200 and response.content:
+            logging.info(f"Got 200 response for fetching text: {self.article_title}")
             soup = BeautifulSoup(response.content, 'html.parser')
-            return soup.get_text()
+            text = soup.get_text()
+            return self.clean_article_text(text)
         else:
             logging.error(f"Failed to retrieve article text: {response.status_code} - {response.text}")
             return "Failed to retrieve article text"
 
+    def clean_article_text(self, text):
+        logging.info("Cleaning article text")
+        lines = text.split('\n')
+        cleaned_lines = [line for line in lines if line.strip() and not line.startswith('References') and not line.startswith('External links')]
+        return '\n'.join(cleaned_lines)
+
     def get_top_5000_article_title(self):
         logging.info("Fetching a random article title from the top 5000 list")
-        url = "https://wikimedia.org/api/rest_v1/metrics/pageviews/top/en.wikipedia/all-access/2021/all-days"
-        response = requests.get(url)
+        url = "https://wikimedia.org/api/rest_v1/metrics/pageviews/top/en.wikipedia/all-access/2021/01/01"
+        response = requests.get(url, headers=HEADERS, timeout=10)
         if response.status_code == 200 and response.content:
             data = response.json()
             articles = data.get('items', [])[0].get('articles', [])
@@ -52,7 +64,7 @@ class WikipediaArticle:
     def get_article_popularity(self):
         logging.info(f"Fetching popularity for article: {self.article_title}")
         url = f"https://en.wikipedia.org/w/api.php?action=query&prop=pageviews&titles={self.article_title}&format=json"
-        response = requests.get(url)
+        response = requests.get(url, headers=HEADERS, timeout=10)
         if response.status_code == 200 and response.content:
             data = response.json()
             pages = data.get('query', {}).get('pages', {})
@@ -66,8 +78,8 @@ class WikipediaArticle:
 
     def is_top_5000_popular(self):
         logging.info(f"Checking if article is in the top 5000 in popularity: {self.article_title}")
-        url = "https://wikimedia.org/api/rest_v1/metrics/pageviews/top/en.wikipedia/all-access/2021/all-days"
-        response = requests.get(url)
+        url = "https://wikimedia.org/api/rest_v1/metrics/pageviews/top/en.wikipedia/all-access/2021/01/01"
+        response = requests.get(url, headers=HEADERS, timeout=10)
         if response.status_code == 200 and response.content:
             data = response.json()
             articles = data.get('items', [])[0].get('articles', [])
